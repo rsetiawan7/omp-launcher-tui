@@ -1,0 +1,7 @@
+{
+  "nickname": "Player",
+  "gta_path": "/path/to/GTA",
+  "wine_prefix": "",
+  "runtime": "auto",
+  "master_server": "https://api.open.mp/servers"
+}

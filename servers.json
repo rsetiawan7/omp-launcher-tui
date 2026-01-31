@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Open.MP Official",
+    "host": "127.0.0.1",
+    "port": 7777
+  },
+  {
+    "name": "Example Community",
+    "host": "203.0.113.10",
+    "port": 7777
+  }
+]

@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Open.MP Master Server List Schema",
+  "description": "JSON schema for hosting a compatible master server list for SA-MP/Open.MP launchers",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["ip", "hn", "pc", "pm"],
+    "properties": {
+      "ip": {
+        "type": "string",
+        "description": "Server IP address and port in format 'ip:port' (e.g., '127.0.0.1:7777')",
+        "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}:[0-9]{1,5}$",
+        "examples": ["127.0.0.1:7777", "192.168.1.100:7778"]
+      },
+      "hn": {
+        "type": "string",
+        "description": "Server hostname/name",
+        "maxLength": 255,
+        "examples": ["My Awesome Server", "Roleplay Server #1"]
+      },
+      "pc": {
+        "type": "integer",
+        "description": "Current player count",
+        "minimum": 0,
+        "maximum": 1000,
+        "examples": [15, 42, 100]
+      },
+      "pm": {
+        "type": "integer",
+        "description": "Maximum player slots",
+        "minimum": 1,
+        "maximum": 1000,
+        "examples": [100, 500, 1000]
+      },
+      "gm": {
+        "type": "string",
+        "description": "Current gamemode name (optional)",
+        "maxLength": 39,
+        "examples": ["Roleplay", "Deathmatch", "Freeroam"]
+      },
+      "la": {
+        "type": "string",
+        "description": "Server language (optional)",
+        "maxLength": 39,
+        "examples": ["English", "Russian", "Portuguese"]
+      },
+      "pa": {
+        "type": "boolean",
+        "description": "Whether server requires password (optional, defaults to false)",
+        "examples": [true, false]
+      }
+    },
+    "additionalProperties": false
+  },
+  "examples": [
+    [
+      {
+        "ip": "127.0.0.1:7777",
+        "hn": "My Test Server",
+        "pc": 10,
+        "pm": 100,
+        "gm": "Roleplay",
+        "la": "English",
+        "pa": false
+      },
+      {
+        "ip": "192.168.1.50:7778",
+        "hn": "Another Server",
+        "pc": 25,
+        "pm": 50,
+        "gm": "Deathmatch",
+        "la": "Portuguese",
+        "pa": true
+      }
+    ]
+  ]
+}
