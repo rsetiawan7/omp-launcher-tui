@@ -83,12 +83,15 @@ omp-tui
 - ✅ Live UDP server querying (non-blocking)
 - ✅ **Favorites system** - Save and manage favorite servers
 - ✅ **Master list & Favorites views** - Switch between views with F/M keys
-- ✅ **Real-time server updates** - Selected server updates every second
+- ✅ **Smart server updates** - Selected server updates with 500ms debounce
 - ✅ **Ping history chart** - Visual ASCII chart of ping over time
 - ✅ **Player list** - View online players (with SA-MP limitation notice)
 - ✅ **Server rules table** - View server rules in sorted format
-- ✅ Search by name/IP
-- ✅ Sort by ping or player count
+- ✅ **Search & Filter** - Search by name/IP, filter by version (0.3.7, 0.3.DL, open.mp)
+- ✅ **Combined filter panel** - All active filters displayed together
+- ✅ Sort by ping or player count (with 0 ping servers at bottom)
+- ✅ **Smart caching** - 24-hour cache validity, preserves ping/player data
+- ✅ **Manual refresh** - R key always fetches fresh data
 - ✅ Password-protected server support
 - ✅ **Browse-only mode** - View servers without connecting (great for demos/streaming)
 - ✅ Wine/Proton launcher with auto-detection

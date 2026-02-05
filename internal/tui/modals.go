@@ -23,6 +23,7 @@ func (a *App) promptSearch() {
 			} else {
 				a.applyFilterAndSort()
 			}
+			a.updateFilterPanel()
 		}
 		a.setKeybindings()
 		a.app.SetRoot(a.layout.Root(), true)
@@ -169,4 +170,195 @@ func (a *App) showAddFavoriteDialog() {
 	})
 
 	a.app.SetRoot(form, true).SetFocus(hostInput)
+}
+
+func (a *App) showVersionFilterDialog() {
+	versions := a.collectAvailableVersions()
+
+	if len(versions) == 0 {
+		a.layout.SetStatus("No server versions available (servers may not have rules loaded yet)")
+		return
+	}
+
+	// Sort versions for consistent display
+	// Simple alphabetical sort
+	for i := 0; i < len(versions); i++ {
+		for j := i + 1; j < len(versions); j++ {
+			if versions[i] > versions[j] {
+				versions[i], versions[j] = versions[j], versions[i]
+			}
+		}
+	}
+
+	list := tview.NewList()
+	list.SetBorder(true).SetTitle("Version Filter (Space to toggle, Enter to apply, Esc to cancel)")
+
+	// Track temporary filter state
+	tempFilters := make(map[string]bool)
+	for k, v := range a.versionFilters {
+		tempFilters[k] = v
+	}
+
+	// Add all versions to the list
+	for _, version := range versions {
+		ver := version // capture for closure
+		selected := tempFilters[ver]
+		text := version
+		if selected {
+			text = "[X] " + text
+		} else {
+			text = "[ ] " + text
+		}
+
+		list.AddItem(text, "", 0, func() {
+			// Toggle selection
+			tempFilters[ver] = !tempFilters[ver]
+
+			// Update list item text
+			for i := 0; i < list.GetItemCount(); i++ {
+				itemText, _ := list.GetItemText(i)
+				itemVersion := strings.TrimPrefix(strings.TrimPrefix(itemText, "[X] "), "[ ] ")
+				if itemVersion == ver {
+					if tempFilters[ver] {
+						list.SetItemText(i, "[X] "+itemVersion, "")
+					} else {
+						list.SetItemText(i, "[ ] "+itemVersion, "")
+					}
+					break
+				}
+			}
+		})
+	}
+
+	// Add buttons at the bottom
+	buttons := tview.NewFlex().SetDirection(tview.FlexColumn)
+
+	applyBtn := tview.NewButton("Apply (Enter)")
+	applyBtn.SetSelectedFunc(func() {
+		// Apply filters
+		a.versionFilters = make(map[string]bool)
+		for k, v := range tempFilters {
+			if v {
+				a.versionFilters[k] = v
+			}
+		}
+
+		// Update filter panel
+		a.updateFilterPanel()
+
+		// Reapply filters
+		if a.viewMode == ViewFavorites {
+			a.applyFavoritesFilterAndSort()
+			a.layout.UpdateTable(a.filteredFavorites)
+		} else {
+			a.applyFilterAndSort()
+		}
+
+		a.setKeybindings()
+		a.app.SetRoot(a.layout.Root(), true)
+
+		activeCount := 0
+		for _, v := range a.versionFilters {
+			if v {
+				activeCount++
+			}
+		}
+		a.layout.SetStatus(fmt.Sprintf("Applied %d version filter(s)", activeCount))
+	})
+
+	clearBtn := tview.NewButton("Clear All")
+	clearBtn.SetSelectedFunc(func() {
+		// Clear all filters
+		tempFilters = make(map[string]bool)
+
+		// Update list
+		for i := 0; i < list.GetItemCount(); i++ {
+			itemText, _ := list.GetItemText(i)
+			itemVersion := strings.TrimPrefix(strings.TrimPrefix(itemText, "[X] "), "[ ] ")
+			list.SetItemText(i, "[ ] "+itemVersion, "")
+		}
+	})
+
+	cancelBtn := tview.NewButton("Cancel (Esc)")
+	cancelBtn.SetSelectedFunc(func() {
+		a.setKeybindings()
+		a.app.SetRoot(a.layout.Root(), true)
+	})
+
+	buttons.AddItem(applyBtn, 0, 1, false)
+	buttons.AddItem(clearBtn, 0, 1, false)
+	buttons.AddItem(cancelBtn, 0, 1, false)
+
+	modal := tview.NewFlex().SetDirection(tview.FlexRow)
+	modal.AddItem(list, 0, 1, true)
+	modal.AddItem(buttons, 3, 0, false)
+
+	// Handle keyboard input
+	a.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			a.setKeybindings()
+			a.app.SetRoot(a.layout.Root(), true)
+			return nil
+		} else if event.Key() == tcell.KeyEnter {
+			// Apply filters
+			a.versionFilters = make(map[string]bool)
+			for k, v := range tempFilters {
+				if v {
+					a.versionFilters[k] = v
+				}
+			}
+
+			// Update filter panel
+			a.updateFilterPanel()
+
+			// Reapply filters
+			if a.viewMode == ViewFavorites {
+				a.applyFavoritesFilterAndSort()
+				a.layout.UpdateTable(a.filteredFavorites)
+			} else {
+				a.applyFilterAndSort()
+			}
+
+			a.setKeybindings()
+			a.app.SetRoot(a.layout.Root(), true)
+
+			activeCount := 0
+			for _, v := range a.versionFilters {
+				if v {
+					activeCount++
+				}
+			}
+			a.layout.SetStatus(fmt.Sprintf("Applied %d version filter(s)", activeCount))
+			return nil
+		} else if event.Rune() == ' ' {
+			// Toggle current item
+			currentItem := list.GetCurrentItem()
+			if currentItem >= 0 && currentItem < list.GetItemCount() {
+				itemText, _ := list.GetItemText(currentItem)
+				itemVersion := strings.TrimPrefix(strings.TrimPrefix(itemText, "[X] "), "[ ] ")
+				tempFilters[itemVersion] = !tempFilters[itemVersion]
+
+				if tempFilters[itemVersion] {
+					list.SetItemText(currentItem, "[X] "+itemVersion, "")
+				} else {
+					list.SetItemText(currentItem, "[ ] "+itemVersion, "")
+				}
+			}
+			return nil
+		} else if event.Rune() == 'c' || event.Rune() == 'C' {
+			// Clear all filters
+			tempFilters = make(map[string]bool)
+
+			// Update list
+			for i := 0; i < list.GetItemCount(); i++ {
+				itemText, _ := list.GetItemText(i)
+				itemVersion := strings.TrimPrefix(strings.TrimPrefix(itemText, "[X] "), "[ ] ")
+				list.SetItemText(i, "[ ] "+itemVersion, "")
+			}
+			return nil
+		}
+		return event
+	})
+
+	a.app.SetRoot(modal, true).SetFocus(list)
 }

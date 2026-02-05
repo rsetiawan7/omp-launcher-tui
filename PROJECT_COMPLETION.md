@@ -96,7 +96,11 @@ omp-launcher-tui/
 - ✓ Fall back to servers.json if master unavailable
 - ✓ Display: name, host:port, ping (ms), players/max
 - ✓ Concurrent UDP querying (64 workers, timeout-safe)
-- ✓ Live updates without UI freeze
+- ✓ Smart updates with 500ms debounce (prevents excessive queries)
+- ✓ Intelligent caching (24-hour validity, preserves ping/player data)
+- ✓ Version filtering (0.3.7, 0.3.DL, open.mp)
+- ✓ Combined filter display panel
+- ✓ Manual refresh always fetches fresh data
 
 ### Search & Sort
 - ✓ `/` key: activates search modal

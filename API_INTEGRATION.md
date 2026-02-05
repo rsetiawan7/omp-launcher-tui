@@ -68,16 +68,31 @@ To use a different server list API (if hosting your own):
 
 The API endpoint should return a JSON array of server objects.
 
+## Caching System
+
+The launcher implements intelligent server caching:
+
+1. **Cache file**: `servers_cache.json` stores server data including:
+   - Server information (name, host, port)
+   - Ping and player counts
+   - Server rules
+   - Last updated timestamp
+
+2. **24-hour validity**: On startup, servers cached less than 24 hours ago are used
+3. **Manual refresh**: Pressing R always fetches fresh data
+4. **Data merging**: Fresh server lists preserve cached ping data during updates
+
 ## Fallback Mechanism
 
 If the API is unreachable (network issues, API down, etc.):
 
 1. Error is logged
-2. `servers.json` (local file) is loaded
-3. User can still browse cached servers
-4. Ping queries are attempted for available servers
+2. Cache is loaded from `servers_cache.json`
+3. If no cache, `servers.json` (local file) is loaded
+4. User can still browse cached servers with ping data
+5. Manual refresh can be attempted when connectivity returns
 
-This ensures the app works even without internet connectivity once the fallback is populated.
+This ensures the app works even without internet connectivity once the cache is populated.
 
 ## API Compatibility
 

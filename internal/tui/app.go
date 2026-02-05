@@ -17,6 +17,12 @@ import (
 	"github.com/rsetiawan7/omp-launcher-tui/internal/server"
 )
 
+const (
+	SERVER_VERSION_037    = "0.3.7"
+	SERVER_VERSION_03DL   = "0.3.DL"
+	SERVER_VERSION_OPENMP = "open.mp"
+)
+
 type ViewMode int
 
 const (
@@ -36,6 +42,7 @@ type App struct {
 	searchQuery         string
 	sortMode            server.SortMode
 	viewMode            ViewMode
+	versionFilters      map[string]bool
 	refreshLock         sync.Mutex
 	refreshing          bool
 	busy                bool
@@ -65,15 +72,16 @@ func NewApp(cfg config.Config, version string, updateChecker UpdateChecker) *App
 	}
 
 	app := &App{
-		app:           application,
-		layout:        layout,
-		cfg:           cfg,
-		passwords:     make(map[string]string),
-		sortMode:      server.SortNone,
-		viewMode:      ViewMasterList,
-		version:       version,
-		updateChecker: updateChecker,
-		lastQueryTime: make(map[string]time.Time),
+		app:            application,
+		layout:         layout,
+		cfg:            cfg,
+		passwords:      make(map[string]string),
+		sortMode:       server.SortNone,
+		viewMode:       ViewMasterList,
+		versionFilters: make(map[string]bool),
+		version:        version,
+		updateChecker:  updateChecker,
+		lastQueryTime:  make(map[string]time.Time),
 	}
 	app.setKeybindings()
 	app.layout.SetSelectionChangedFunc(app.onServerSelected)
@@ -103,13 +111,13 @@ func (a *App) Run() error {
 		}
 		// Then refresh in background
 		time.Sleep(500 * time.Millisecond)
-		a.RefreshServers()
+		a.RefreshServers(false) // forceRefresh=false on startup to use cache
 	}()
 
 	return a.app.SetRoot(root, true).EnableMouse(false).Run()
 }
 
-func (a *App) RefreshServers() {
+func (a *App) RefreshServers(forceRefresh bool) {
 	a.refreshLock.Lock()
 	if a.refreshing || a.busy {
 		a.refreshLock.Unlock()
@@ -140,7 +148,21 @@ func (a *App) RefreshServers() {
 		return
 	}
 
+	// Merge with existing cached data to preserve ping and other info
+	existingServers := make(map[string]server.Server)
+	for _, srv := range a.servers {
+		key := fmt.Sprintf("%s:%d", srv.Host, srv.Port)
+		existingServers[key] = srv
+	}
+
 	for i := range servers {
+		key := fmt.Sprintf("%s:%d", servers[i].Host, servers[i].Port)
+		if cached, exists := existingServers[key]; exists {
+			// Preserve cached data
+			servers[i].Ping = cached.Ping
+			servers[i].Rules = cached.Rules
+			servers[i].LastUpdated = cached.LastUpdated
+		}
 		servers[i].Loading = true
 	}
 
@@ -148,10 +170,10 @@ func (a *App) RefreshServers() {
 	a.applyFilterAndSort()
 
 	a.setBusy(false, fmt.Sprintf("Loaded %d servers", len(servers)))
-	go a.queryServers(servers)
+	go a.queryServers(servers, forceRefresh)
 }
 
-func (a *App) queryServers(servers []server.Server) {
+func (a *App) queryServers(servers []server.Server, forceRefresh bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -159,6 +181,7 @@ func (a *App) queryServers(servers []server.Server) {
 	workers := 64
 	var wg sync.WaitGroup
 	var completed int32
+	var skipped int32
 	total := len(servers)
 
 	for i := 0; i < workers; i++ {
@@ -167,6 +190,18 @@ func (a *App) queryServers(servers []server.Server) {
 			defer wg.Done()
 			for idx := range jobs {
 				entry := servers[idx]
+
+				// Skip querying if server was updated less than 24 hours ago (only if not forcing refresh)
+				if !forceRefresh && !entry.LastUpdated.IsZero() && time.Since(entry.LastUpdated) < 24*time.Hour {
+					entry.Loading = false
+					a.updateServer(entry)
+					current := atomic.AddInt32(&skipped, 1)
+					a.app.QueueUpdateDraw(func() {
+						a.layout.SetStatus(fmt.Sprintf("Loaded from cache: %d, Updated: %d of %d servers", current, atomic.LoadInt32(&completed), total))
+					})
+					continue
+				}
+
 				res, err := server.QueryServer(ctx, entry.Host, entry.Port)
 				if err != nil {
 					continue
@@ -178,12 +213,19 @@ func (a *App) queryServers(servers []server.Server) {
 				entry.Passworded = res.Passworded
 				entry.Loading = false
 				entry.LastUpdated = res.LastUpdated
+
+				// Query server rules
+				rules, err := server.QueryServerRules(ctx, entry.Host, entry.Port)
+				if err == nil {
+					entry.Rules = rules
+				}
+
 				a.updateServer(entry)
 
 				// Update progress
 				current := atomic.AddInt32(&completed, 1)
 				a.app.QueueUpdateDraw(func() {
-					a.layout.SetStatus(fmt.Sprintf("Updated %d of %d servers", current, total))
+					a.layout.SetStatus(fmt.Sprintf("Loaded from cache: %d, Updated: %d of %d servers", atomic.LoadInt32(&skipped), current, total))
 				})
 			}
 		}()
@@ -196,7 +238,9 @@ func (a *App) queryServers(servers []server.Server) {
 	wg.Wait()
 
 	a.app.QueueUpdateDraw(func() {
-		a.layout.SetStatus(fmt.Sprintf("All %d servers updated", total))
+		totalSkipped := atomic.LoadInt32(&skipped)
+		totalUpdated := atomic.LoadInt32(&completed)
+		a.layout.SetStatus(fmt.Sprintf("Loaded from cache: %d, Updated: %d servers", totalSkipped, totalUpdated))
 	})
 
 	// Save cache after all servers are updated
@@ -263,13 +307,43 @@ func (a *App) updateFavoriteServer(updated server.Server) {
 	})
 }
 
+// updateFavoriteServerInFile updates the favorites file with rules and last updated timestamp
+func (a *App) updateFavoriteServerInFile(srv server.Server) {
+	favorites, err := config.LoadFavorites()
+	if err != nil {
+		return
+	}
+
+	// Find and update the favorite with rules and last updated
+	updated := false
+	for i := range favorites.Servers {
+		if favorites.Servers[i].Host == srv.Host && favorites.Servers[i].Port == srv.Port {
+			favorites.Servers[i].Name = srv.Name
+			favorites.Servers[i].LastUpdated = srv.LastUpdated.Format(time.RFC3339)
+			favorites.Servers[i].Rules = srv.Rules
+			updated = true
+			break
+		}
+	}
+
+	if updated {
+		config.SaveFavorites(favorites)
+	}
+}
+
 func (a *App) applyFilterAndSort() {
 	filtered := make([]server.Server, 0, len(a.servers))
 	query := strings.TrimSpace(strings.ToLower(a.searchQuery))
 	for _, srv := range a.servers {
-		if query == "" || strings.Contains(strings.ToLower(srv.Name), query) || strings.Contains(strings.ToLower(srv.Addr()), query) {
-			filtered = append(filtered, srv)
+		// Apply text search filter
+		if query != "" && !strings.Contains(strings.ToLower(srv.Name), query) && !strings.Contains(strings.ToLower(srv.Addr()), query) {
+			continue
 		}
+		// Apply version filter
+		if !a.matchesVersionFilter(srv) {
+			continue
+		}
+		filtered = append(filtered, srv)
 	}
 	server.SortServers(filtered, a.sortMode)
 	a.filtered = filtered
@@ -283,11 +357,6 @@ func (a *App) updateTableTitle() {
 		title = "★ Favorites"
 	} else {
 		title = "Servers"
-	}
-
-	// Add search query if present
-	if a.searchQuery != "" {
-		title += fmt.Sprintf(" [Search: \"%s\"]", a.searchQuery)
 	}
 
 	// Add sort mode
@@ -498,7 +567,7 @@ func (a *App) setKeybindings() {
 				if a.viewMode == ViewFavorites {
 					go a.refreshFavorites()
 				} else {
-					go a.RefreshServers()
+					go a.RefreshServers(true) // forceRefresh=true for manual refresh
 				}
 				return nil
 			case "s":
@@ -528,6 +597,9 @@ func (a *App) setKeybindings() {
 				return nil
 			case "a":
 				a.addCustomFavorite()
+				return nil
+			case "v":
+				a.showVersionFilterDialog()
 				return nil
 			case "d":
 				if a.viewMode == ViewFavorites {
@@ -594,11 +666,28 @@ func (a *App) onServerSelected(row int) {
 }
 
 func (a *App) updateSelectedServerContinuously(ctx context.Context, srv server.Server) {
+	// Wait 500ms before the first query (debounce)
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(500 * time.Millisecond):
+		// Continue to query
+	}
+
+	// Check if this is still the selected server after waiting
+	a.selectedServerLock.Lock()
+	if a.currentlySelected == nil || a.currentlySelected.Host != srv.Host || a.currentlySelected.Port != srv.Port {
+		a.selectedServerLock.Unlock()
+		return
+	}
+	a.selectedServerLock.Unlock()
+
+	// Query the server for the first time
+	a.queryAndUpdateServer(srv)
+
+	// Continue querying every second
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-
-	// Query immediately first
-	a.queryAndUpdateServer(srv)
 
 	for {
 		select {
@@ -627,11 +716,24 @@ func (a *App) queryAndUpdateServer(srv server.Server) {
 		return
 	}
 
+	// Query rules and add to server
+	rules, err := server.QueryServerRules(ctx, srv.Host, srv.Port)
+	if err == nil {
+		res.Rules = rules
+	} else {
+		res.Rules = map[string]string{}
+	}
+
 	res.Loading = false
 	a.updateServer(res)
 
 	// Also update in favorites if it exists there
 	a.updateFavoriteServer(res)
+
+	// Update favorites file with rules and last updated
+	if config.IsFavorite(res.Host, res.Port) {
+		go a.updateFavoriteServerInFile(res)
+	}
 
 	// Add ping to history
 	pingMs := res.Ping.Milliseconds()
@@ -663,7 +765,7 @@ func (a *App) queryAndUpdateServer(srv server.Server) {
 	}
 
 	// Query rules
-	rules, err := server.QueryServerRules(ctx, srv.Host, srv.Port)
+	rules, err = server.QueryServerRules(ctx, srv.Host, srv.Port)
 	if err != nil {
 		a.app.QueueUpdateDraw(func() {
 			a.layout.SetRules(map[string]string{})
@@ -765,12 +867,81 @@ func (a *App) applyFavoritesFilterAndSort() {
 	filtered := make([]server.Server, 0, len(a.favorites))
 	query := strings.TrimSpace(strings.ToLower(a.searchQuery))
 	for _, srv := range a.favorites {
-		if query == "" || strings.Contains(strings.ToLower(srv.Name), query) || strings.Contains(strings.ToLower(srv.Addr()), query) {
-			filtered = append(filtered, srv)
+		// Apply text search filter
+		if query != "" && !strings.Contains(strings.ToLower(srv.Name), query) && !strings.Contains(strings.ToLower(srv.Addr()), query) {
+			continue
 		}
+		// Apply version filter
+		if !a.matchesVersionFilter(srv) {
+			continue
+		}
+		filtered = append(filtered, srv)
 	}
 	server.SortServers(filtered, a.sortMode)
 	a.filteredFavorites = filtered
+}
+
+func (a *App) matchesVersionFilter(srv server.Server) bool {
+	// If no version filters are active, show all servers
+	if len(a.versionFilters) == 0 {
+		return true
+	}
+
+	// Check if server has rules
+	if len(srv.Rules) == 0 {
+		return false
+	}
+
+	// Static allowed versions
+	allowedVersions := []string{SERVER_VERSION_037, SERVER_VERSION_03DL, SERVER_VERSION_OPENMP}
+
+	// Check version rule
+	if version, ok := srv.Rules["version"]; ok {
+		for _, allowedVer := range allowedVersions {
+			ver := allowedVer
+			if allowedVer == SERVER_VERSION_OPENMP {
+				ver = "omp"
+			}
+
+			if strings.Contains(version, ver) && a.versionFilters[allowedVer] {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (a *App) collectAvailableVersions() []string {
+	// Return static allowed versions
+	return []string{SERVER_VERSION_037, SERVER_VERSION_03DL, SERVER_VERSION_OPENMP}
+}
+
+func (a *App) updateFilterPanel() {
+	var filters []string
+
+	// Add search query if present
+	if a.searchQuery != "" {
+		filters = append(filters, fmt.Sprintf("Search: \"%s\"", a.searchQuery))
+	}
+
+	// Add version filters
+	activeVersionFilters := make([]string, 0, len(a.versionFilters))
+	for version, active := range a.versionFilters {
+		if active {
+			activeVersionFilters = append(activeVersionFilters, version)
+		}
+	}
+	if len(activeVersionFilters) > 0 {
+		filters = append(filters, fmt.Sprintf("Version: %s", strings.Join(activeVersionFilters, ", ")))
+	}
+
+	if len(filters) == 0 {
+		a.layout.UpdateFilterPanel("No filters active")
+	} else {
+		text := fmt.Sprintf("Filters: %s", strings.Join(filters, " | "))
+		a.layout.UpdateFilterPanel(text)
+	}
 }
 
 func (a *App) toggleViewMode() {
@@ -879,6 +1050,14 @@ func (a *App) refreshFavorites() {
 					return
 				}
 
+				// Query rules
+				rules, err := server.QueryServerRules(ctx, srv.Host, srv.Port)
+				if err == nil {
+					res.Rules = rules
+				} else {
+					res.Rules = map[string]string{}
+				}
+
 				a.app.QueueUpdateDraw(func() {
 					a.favorites[idx].Name = res.Name
 					a.favorites[idx].Players = res.Players
@@ -887,12 +1066,16 @@ func (a *App) refreshFavorites() {
 					a.favorites[idx].Passworded = res.Passworded
 					a.favorites[idx].Loading = false
 					a.favorites[idx].LastUpdated = res.LastUpdated
+					a.favorites[idx].Rules = res.Rules
 
 					if a.viewMode == ViewFavorites {
 						a.applyFavoritesFilterAndSort()
 						a.layout.UpdateTable(a.filteredFavorites)
 					}
 				})
+
+				// Update favorites file with rules and last updated
+				go a.updateFavoriteServerInFile(res)
 			}(i)
 		}
 

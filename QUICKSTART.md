@@ -80,6 +80,14 @@ omp-tui
 | `make tidy` | Tidy go.mod |
 | `make dev-setup` | Set up dev environment |
 
+## Key Features
+
+- **Version Filtering** - Press `V` to filter by 0.3.7, 0.3.DL, or open.mp
+- **Smart Caching** - Server data cached with 24-hour validity
+- **Debounced Updates** - 500ms delay before querying selected server
+- **Search & Filter** - Press `/` to search, filters shown in bottom panel
+- **Manual Refresh** - Press `R` to force fetch fresh server data
+
 ## Project Layout
 
 ```
@@ -96,7 +104,7 @@ omp-launcher-tui/
 │       └── main.go         # Entry point
 ├── internal/
 │   ├── config/             # Config & favorites
-│   ├── server/             # Server querying
+│   ├── server/             # Server querying & caching
 │   ├── launcher/           # Launch execution
 │   └── tui/               # UI implementation
 └── bin/                    # Built binaries (created by make build)

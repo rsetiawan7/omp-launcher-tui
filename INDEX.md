@@ -84,6 +84,14 @@ Welcome to the Open.MP TUI Launcher project! This is your guide to all available
 
 ## 🎯 Quick Navigation
 
+## 🌟 Recent Updates
+
+- **Version Filtering** - Filter servers by 0.3.7, 0.3.DL, or open.mp (Press V)
+- **Smart Caching** - 24-hour cache with preserved ping/player data
+- **Debounced Updates** - 500ms delay prevents excessive server queries
+- **Enhanced Filtering** - Combined search and version filter display
+- **Manual Refresh** - R key always fetches fresh data
+
 ### I want to...
 
 **...get started immediately**

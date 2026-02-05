@@ -21,11 +21,20 @@ The launcher fetches servers from the **Open.MP API** (`https://api.open.mp/serv
 - **Server Browser**: Browse Open.MP servers in a responsive TUI
 - **Favorites System**: Save your favorite servers to a separate list with quick toggle
 - **Master List & Favorites Views**: Switch between master server list and your favorites
-- **Live Server Info**: Real-time updates every second for selected server (ping, players, rules)
+- **Live Server Info**: Real-time updates for selected server (ping, players, rules) with 500ms debounce
 - **Ping History Chart**: Visual ASCII chart showing ping history over time
 - **Player List**: View online players for the selected server (with SA-MP limitation notice when unavailable)
 - **Server Rules**: View server rules in a sorted table format
-- **Search & Sort**: Find servers by name/IP, sort by ping or player count
+- **Search & Filter**: 
+  - Search servers by name/IP
+  - Filter by version (0.3.7, 0.3.DL, open.mp)
+  - Combined filter display panel
+- **Sort Options**: Sort by ping or player count
+- **Smart Caching**: 
+  - Cached server data including ping and player counts
+  - 24-hour cache validity for automatic refreshes
+  - Manual refresh (R key) always fetches fresh data
+  - Preserved ping data when merging server lists
 - **Password Support**: Securely enter passwords for locked servers (never persisted)
 - **Browse-Only Mode**: Optional mode to view servers without connecting (great for streaming/demos)
 - **Cross-Platform Launcher**: Automatic Wine/Proton detection on Linux/macOS; native Windows support
@@ -85,7 +94,11 @@ Configuration files are stored in the application support directory:
 - `config.json` - Main configuration
 - `favorites.json` - Saved favorite servers
 - `masterlist.json` - Master server list sources
-- `servers_cache.json` - Cached server list
+- `servers_cache.json` - Cached server list (includes ping, players, rules)
+  - Updates when servers are queried
+  - Used on startup to display servers immediately
+  - 24-hour validity for automatic refreshes
+  - Manual refresh (R key) always updates cache with fresh data
 
 ### Example Config
 
@@ -112,8 +125,9 @@ Configuration files are stored in the application support directory:
 ### Main View
 
 | Key | Action |
-|-----|--------|
-| `↑` `↓` | Navigate servers |
+|-----|-Search by server name or IP |
+| `V` | Filter by version (0.3.7, 0.3.DL, open.mp) |
+| `R` | Refresh server list (fetches fresh data)
 | `Enter` | Connect to selected server |
 | `C` | Open configuration modal |
 | `/` | Open search (by server name or IP) |
@@ -231,7 +245,15 @@ Check if "Browse Only Mode" is enabled in the configuration (press `C`). When en
 ├── servers.json                    # Fallback server list
 └── README.md                       # This file
 ```
-
+Smart Updates**: 
+  - Selected server info updates every second after 500ms debounce
+  - Prevents unnecessary queries when quickly browsing servers
+- **Intelligent Caching**:
+  - Servers cached with ping, players, and rules data
+  - 24-hour cache validity for startup refreshes
+  - Manual refresh always fetches fresh data
+  - Cache merging preserves ping data during server list updates
+- **Version Filtering**: Static filter for SA-MP 0.3.7, 0.3.DL, and open.mp versions
 ## Design Notes
 
 - **No CGO**: Zero external C dependencies; static binary

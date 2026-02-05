@@ -7,15 +7,16 @@ import (
 )
 
 type Server struct {
-	Name        string
-	Host        string
-	Port        int
-	Players     int
-	MaxPlayers  int
-	Ping        time.Duration
-	Passworded  bool
-	LastUpdated time.Time
-	Loading     bool
+	Name        string            `json:"name"`
+	Host        string            `json:"host"`
+	Port        int               `json:"port"`
+	Players     int               `json:"players"`
+	MaxPlayers  int               `json:"max_players"`
+	Ping        time.Duration     `json:"ping"`
+	Passworded  bool              `json:"passworded"`
+	LastUpdated time.Time         `json:"last_updated"`
+	Loading     bool              `json:"-"`
+	Rules       map[string]string `json:"rules,omitempty"`
 }
 
 func (s Server) Addr() string {

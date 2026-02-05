@@ -11,9 +11,11 @@ const FavoritesFile = "favorites.json"
 
 // FavoriteServer represents a user-saved server
 type FavoriteServer struct {
-	Name string `json:"name"`
-	Host string `json:"host"`
-	Port int    `json:"port"`
+	Name        string            `json:"name"`
+	Host        string            `json:"host"`
+	Port        int               `json:"port"`
+	LastUpdated string            `json:"last_updated,omitempty"`
+	Rules       map[string]string `json:"rules,omitempty"`
 }
 
 // Favorites holds the list of user favorite servers

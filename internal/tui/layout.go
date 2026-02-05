@@ -11,15 +11,16 @@ import (
 )
 
 type Layout struct {
-	root      *tview.Flex
-	table     *tview.Table
-	players   *tview.Table
-	rules     *tview.Table
-	pingChart *tview.TextView
-	status    *tview.TextView
-	keys      *tview.TextView
-	statusBar *tview.Flex
-	onSelect  func(row int)
+	root        *tview.Flex
+	table       *tview.Table
+	players     *tview.Table
+	rules       *tview.Table
+	pingChart   *tview.TextView
+	status      *tview.TextView
+	keys        *tview.TextView
+	filterPanel *tview.TextView
+	statusBar   *tview.Flex
+	onSelect    func(row int)
 }
 
 func NewLayout() *Layout {
@@ -40,6 +41,9 @@ func NewLayout() *Layout {
 	status.SetText("Ready")
 	keys := tview.NewTextView().SetDynamicColors(true)
 	keys.SetText(StatusKeys)
+	filterPanel := tview.NewTextView().SetDynamicColors(true)
+	filterPanel.SetBorder(true).SetTitle("Filters (V to toggle)")
+	filterPanel.SetText("No version filters active")
 
 	rightPanel := tview.NewFlex().SetDirection(tview.FlexRow)
 	rightPanel.AddItem(players, 0, 1, false)
@@ -56,17 +60,19 @@ func NewLayout() *Layout {
 
 	root := tview.NewFlex().SetDirection(tview.FlexRow)
 	root.AddItem(main, 0, 1, true)
+	root.AddItem(filterPanel, 3, 0, false)
 	root.AddItem(statusBar, 1, 0, false)
 
 	layout := &Layout{
-		root:      root,
-		table:     table,
-		players:   players,
-		rules:     rules,
-		pingChart: pingChart,
-		status:    status,
-		keys:      keys,
-		statusBar: statusBar,
+		root:        root,
+		table:       table,
+		players:     players,
+		rules:       rules,
+		pingChart:   pingChart,
+		status:      status,
+		keys:        keys,
+		filterPanel: filterPanel,
+		statusBar:   statusBar,
 	}
 	layout.initTable()
 
@@ -310,4 +316,8 @@ func (l *Layout) UpdateTableRow(index int, srv server.Server) {
 	l.table.SetCell(tableRow, 1, tview.NewTableCell(srv.Addr()).SetExpansion(1))
 	l.table.SetCell(tableRow, 2, tview.NewTableCell(ping).SetExpansion(1))
 	l.table.SetCell(tableRow, 3, tview.NewTableCell(players).SetExpansion(1))
+}
+
+func (l *Layout) UpdateFilterPanel(text string) {
+	l.filterPanel.SetText(text)
 }
