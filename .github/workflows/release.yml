@@ -104,14 +104,95 @@ jobs:
           sha256sum * > checksums.txt
           cat checksums.txt
 
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          # Get the commit message of the tag
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          
+          # Extract version without 'v' prefix
+          VERSION_NUM=${VERSION#v}
+          
+          # Create release notes
+          cat > release_notes.md << 'NOTES_EOF'
+          ## 🎉 What's New in $VERSION
+          
+          $COMMIT_MSG
+          
+          ---
+          
+          ## 📦 Installation
+          
+          Download the appropriate binary for your platform:
+          
+          - **Linux (amd64)**: `omp-tui-linux-amd64`
+          - **macOS (Intel)**: `omp-tui-darwin-amd64`
+          - **macOS (Apple Silicon)**: `omp-tui-darwin-arm64`
+          - **Windows**: `omp-tui-windows-amd64.exe`
+          
+          ### Verify Downloads
+          
+          All binaries include SHA256 checksums in `checksums.txt`. Verify your download:
+          
+          ```bash
+          # Linux/macOS
+          sha256sum -c checksums.txt
+          
+          # macOS alternative
+          shasum -a 256 -c checksums.txt
+          ```
+          
+          ### Make Executable (Linux/macOS)
+          
+          ```bash
+          chmod +x omp-tui-*
+          ./omp-tui-* --version
+          ```
+          
+          ---
+          
+          ## 🚀 Quick Start
+          
+          ```bash
+          # Initialize configuration
+          ./omp-tui init
+          
+          # Run interactive TUI
+          ./omp-tui
+          
+          # Connect directly to a server
+          ./omp-tui connect 127.0.0.1
+          ```
+          
+          ---
+          
+          ## 📖 Documentation
+          
+          - [README.md](https://github.com/rsetiawan7/omp-launcher-tui/blob/main/README.md)
+          - [Quick Start Guide](https://github.com/rsetiawan7/omp-launcher-tui/blob/main/QUICKSTART.md)
+          
+          ---
+          
+          **Full Changelog**: https://github.com/rsetiawan7/omp-launcher-tui/compare/v$VERSION...main
+          NOTES_EOF
+          
+          # Replace variables in release notes
+          sed -i "s/\$VERSION/$VERSION/g" release_notes.md
+          sed -i "s|\$COMMIT_MSG|$COMMIT_MSG|g" release_notes.md
+          
+          echo "Release notes generated:"
+          cat release_notes.md
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.VERSION }}
           name: Release ${{ steps.version.outputs.VERSION }}
+          body_path: release_notes.md
           draft: false
           prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
-          generate_release_notes: true
           files: |
             release/omp-tui-linux-amd64
             release/omp-tui-darwin-amd64
