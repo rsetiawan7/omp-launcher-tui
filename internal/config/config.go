@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"math/rand"
+	"runtime"
 	"time"
 )
 
@@ -71,11 +72,35 @@ func generateRandomNickname() string {
 	return name
 }
 
+// getDefaultWindowsPaths returns default GTA and OMP launcher paths for Windows
+func getDefaultWindowsPaths() (gtaPath, ompLauncher string) {
+	if runtime.GOOS != "windows" {
+		return "", ""
+	}
+
+	// On 64-bit Windows, 32-bit programs are installed in "Program Files (x86)"
+	// On 32-bit Windows, programs are installed in "Program Files"
+	// We check the architecture where the Go binary is running
+	if runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64" {
+		// 64-bit system
+		gtaPath = `C:\Program Files (x86)\Rockstar Games\GTA San Andreas`
+		ompLauncher = `C:\Program Files (x86)\Open Multiplayer Launcher`
+	} else {
+		// 32-bit system
+		gtaPath = `C:\Program Files\Rockstar Games\GTA San Andreas`
+		ompLauncher = `C:\Program Files\Open Multiplayer Launcher`
+	}
+
+	return gtaPath, ompLauncher
+}
+
 func DefaultConfig() Config {
+	gtaPath, ompLauncher := getDefaultWindowsPaths()
+	
 	return Config{
 		Nickname:     generateRandomNickname(),
-		GTAPath:      "",
-		OMPLauncher:  "",
+		GTAPath:      gtaPath,
+		OMPLauncher:  ompLauncher,
 		Runtime:      RuntimeAuto,
 		MasterServer: "https://api.open.mp/servers",
 		BrowseOnly:   false,
