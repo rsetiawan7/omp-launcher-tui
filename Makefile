@@ -2,7 +2,7 @@
 
 # Build variables
 BINARY_NAME := omp-tui
-VERSION := 1.1.0
+VERSION := 1.2.0
 BUILD_DIR := ./bin
 MAIN_PKG := ./cmd/omp-tui
 UNAME_S := $(shell uname -s)

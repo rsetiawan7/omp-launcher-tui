@@ -74,8 +74,97 @@ make build
 ### Run
 
 ```sh
+# Initialize configuration (first time setup)
+./omp-tui init
+
+# Run TUI mode (interactive browser)
 ./omp-tui
+
+# Run CLI mode (direct connection)
+./omp-tui connect <alias|host:port>
 ```
+
+**Init Command:**
+```sh
+# Initialize configuration and fetch server list
+./omp-tui init
+
+# Initialize with GTA path and OMP launcher path
+./omp-tui init --gta-path "/path/to/GTA San Andreas" --omp-launcher "/path/to/omp-launcher"
+
+# Initialize with only GTA path
+./omp-tui init --gta-path "/path/to/GTA San Andreas"
+```
+
+The `init` command will:
+- Create configuration directory
+- Generate default `config.json` file
+- Apply provided GTA path and OMP launcher path (if flags are used)
+- Create empty `favorites.json` file
+- Generate `master_lists.json` with Open.MP official server list
+- Fetch servers from the master list
+- Query each server for detailed information
+- Save all server data to `servers_cache.json`
+
+This is useful for:
+- First-time setup
+- Resetting configuration to defaults
+- Pre-populating server cache for faster startup
+- Automated setup with predefined paths
+
+**Export/Import Commands:**
+```sh
+# Export configuration, favorites, and master lists to a file
+./omp-tui export my-backup.json
+
+# Import configuration from a file
+./omp-tui import my-backup.json
+
+# Export to a subdirectory (creates directory if needed)
+./omp-tui export backup/config-$(date +%Y%m%d).json
+```
+
+Export/Import features:
+- Exports all configuration in a single JSON file
+- Includes config settings, favorites, and master lists
+- Shows summary of exported/imported data
+- Import requires confirmation before overwriting
+- Useful for backups, migration, and sharing configurations
+
+**CLI Mode Examples:**
+```sh
+# Connect using alias from favorites
+./omp-tui connect my-server
+
+# Connect to a server directly (port defaults to 7777)
+./omp-tui connect 127.0.0.1
+
+# Connect with custom port
+./omp-tui connect 127.0.0.1:8888
+
+# Connect to a remote server
+./omp-tui connect play.example.com:7777
+```
+
+**CLI Mode Features:**
+- **init**: Initialize configuration and fetch server list
+  - Creates all necessary config files
+  - Optional `--gta-path` and `--omp-launcher` flags for automated setup
+  - Fetches and caches servers from master list
+  - Pre-queries servers for detailed information
+- **connect**: Direct connection without TUI
+  - Supports alias lookup from favorites (faster and easier)
+  - Supports host:port format or host only (defaults to port 7777)
+  - Automatic server query to check password requirement
+  - Password prompt if server is password-protected
+  - Uses game path and launcher path from config
+  - Helpful error messages guide you to run `init` if config is missing
+- **export**: Export configuration, favorites, and master lists to a file
+  - Single JSON file containing all settings
+  - Useful for backups and migration
+- **import**: Import configuration from an exported file
+  - Restores config, favorites, and master lists
+  - Requires confirmation before overwriting
 
 On macOS, if you get a signing error, use:
 ```sh

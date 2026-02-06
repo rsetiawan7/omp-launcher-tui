@@ -298,10 +298,16 @@ func (l *Layout) UpdateTableRow(index int, srv server.Server) {
 	tableRow := index + 1
 	ping := "-"
 	players := "-"
+
+	// Use alias if available, otherwise use server name
 	name := srv.Name
+	if srv.Alias != "" {
+		name = srv.Alias
+	}
 	if name == "" {
 		name = "(unknown)"
 	}
+
 	if !srv.Loading {
 		ping = fmt.Sprintf("%d ms", srv.Ping.Milliseconds())
 		players = fmt.Sprintf("%d/%d", srv.Players, srv.MaxPlayers)

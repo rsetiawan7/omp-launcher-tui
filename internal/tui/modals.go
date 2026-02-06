@@ -79,11 +79,92 @@ func (a *App) promptPassword() {
 	a.app.SetRoot(modal, true).SetFocus(input)
 }
 
+func (a *App) promptAlias(srv server.Server) {
+	// Validation function for alias: alphanumeric, dash, underscore only
+	aliasValidator := func(text string, ch rune) bool {
+		return (ch >= 'a' && ch <= 'z') ||
+			(ch >= 'A' && ch <= 'Z') ||
+			(ch >= '0' && ch <= '9') ||
+			ch == '-' ||
+			ch == '_'
+	}
+
+	input := tview.NewInputField().
+		SetLabel("Alias (a-z, 0-9, -, _): ").
+		SetFieldWidth(40).
+		SetAcceptanceFunc(aliasValidator)
+
+	input.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyEnter {
+			alias := strings.TrimSpace(input.GetText())
+
+			// Check alias uniqueness if provided
+			if alias != "" && !config.IsAliasUnique(alias, srv.Host, srv.Port) {
+				a.layout.SetStatus("Error: Alias already exists")
+				a.setKeybindings()
+				a.app.SetRoot(a.layout.Root(), true)
+				return
+			}
+
+			// Add to favorites with alias
+			if err := config.AddFavorite(srv.Name, alias, srv.Host, srv.Port); err != nil {
+				a.layout.SetStatus(fmt.Sprintf("Failed to add favorite: %v", err))
+				a.setKeybindings()
+				a.app.SetRoot(a.layout.Root(), true)
+				return
+			}
+
+			displayName := srv.Name
+			if alias != "" {
+				displayName = alias
+			}
+			a.layout.SetStatus(fmt.Sprintf("Added %s to favorites", displayName))
+
+			// Update local favorites list
+			a.favorites = append(a.favorites, srv)
+			a.applyFavoritesFilterAndSort()
+		}
+
+		a.setKeybindings()
+		a.app.SetRoot(a.layout.Root(), true)
+	})
+
+	modal := tview.NewFlex().SetDirection(tview.FlexRow)
+	modal.AddItem(input, 3, 0, true)
+	modal.SetBorder(true).SetTitle(fmt.Sprintf("Add '%s' to Favorites", srv.Name))
+
+	// Clear global keybindings for modal
+	a.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			a.setKeybindings()
+			a.app.SetRoot(a.layout.Root(), true)
+			return nil
+		}
+		return event
+	})
+
+	a.app.SetRoot(modal, true).SetFocus(input)
+}
+
 func (a *App) showAddFavoriteDialog() {
 	form := tview.NewForm()
 	form.SetBorder(true).SetTitle("Add Favorite Server (Enter to save, Esc to cancel)")
 
-	var hostInput, portInput *tview.InputField
+	var aliasInput, hostInput, portInput *tview.InputField
+
+	// Validation function for alias: alphanumeric, dash, underscore only
+	aliasValidator := func(text string, ch rune) bool {
+		return (ch >= 'a' && ch <= 'z') ||
+			(ch >= 'A' && ch <= 'Z') ||
+			(ch >= '0' && ch <= '9') ||
+			ch == '-' ||
+			ch == '_'
+	}
+
+	aliasInput = tview.NewInputField().
+		SetLabel("Alias (a-z, 0-9, -, _): ").
+		SetFieldWidth(30).
+		SetAcceptanceFunc(aliasValidator)
 
 	hostInput = tview.NewInputField().
 		SetLabel("Host (IP:Port or IP): ").
@@ -96,10 +177,12 @@ func (a *App) showAddFavoriteDialog() {
 		SetText("7777").
 		SetAcceptanceFunc(tview.InputFieldInteger)
 
+	form.AddFormItem(aliasInput)
 	form.AddFormItem(hostInput)
 	form.AddFormItem(portInput)
 
 	form.AddButton("Add", func() {
+		aliasText := strings.TrimSpace(aliasInput.GetText())
 		hostText := strings.TrimSpace(hostInput.GetText())
 		portText := strings.TrimSpace(portInput.GetText())
 
@@ -126,8 +209,14 @@ func (a *App) showAddFavoriteDialog() {
 			}
 		}
 
+		// Check alias uniqueness if provided
+		if aliasText != "" && !config.IsAliasUnique(aliasText, host, port) {
+			a.layout.SetStatus("Error: Alias already exists")
+			return
+		}
+
 		// Add to favorites
-		if err := config.AddFavorite("", host, port); err != nil {
+		if err := config.AddFavorite("", aliasText, host, port); err != nil {
 			a.layout.SetStatus(fmt.Sprintf("Failed to add favorite: %v", err))
 			a.setKeybindings()
 			a.app.SetRoot(a.layout.Root(), true)
@@ -142,7 +231,11 @@ func (a *App) showAddFavoriteDialog() {
 			Loading: true,
 		})
 
-		a.layout.SetStatus(fmt.Sprintf("Added %s:%d to favorites", host, port))
+		displayName := aliasText
+		if displayName == "" {
+			displayName = fmt.Sprintf("%s:%d", host, port)
+		}
+		a.layout.SetStatus(fmt.Sprintf("Added %s to favorites", displayName))
 		a.setKeybindings()
 		a.app.SetRoot(a.layout.Root(), true)
 

@@ -12,6 +12,7 @@ const FavoritesFile = "favorites.json"
 // FavoriteServer represents a user-saved server
 type FavoriteServer struct {
 	Name        string            `json:"name"`
+	Alias       string            `json:"alias,omitempty"`
 	Host        string            `json:"host"`
 	Port        int               `json:"port"`
 	LastUpdated string            `json:"last_updated,omitempty"`
@@ -73,7 +74,7 @@ func SaveFavorites(favorites Favorites) error {
 }
 
 // AddFavorite adds a server to favorites if not already present
-func AddFavorite(name, host string, port int) error {
+func AddFavorite(name, alias, host string, port int) error {
 	favorites, err := LoadFavorites()
 	if err != nil {
 		return err
@@ -86,10 +87,16 @@ func AddFavorite(name, host string, port int) error {
 		}
 	}
 
+	// Check alias uniqueness if provided
+	if alias != "" && !IsAliasUnique(alias, host, port) {
+		return errors.New("alias already exists")
+	}
+
 	favorites.Servers = append(favorites.Servers, FavoriteServer{
-		Name: name,
-		Host: host,
-		Port: port,
+		Name:  name,
+		Alias: alias,
+		Host:  host,
+		Port:  port,
 	})
 
 	return SaveFavorites(favorites)
@@ -126,4 +133,29 @@ func IsFavorite(host string, port int) bool {
 		}
 	}
 	return false
+}
+
+// IsAliasUnique checks if an alias is unique (not used by other servers)
+// Empty aliases are always considered unique
+func IsAliasUnique(alias, host string, port int) bool {
+	if alias == "" {
+		return true
+	}
+
+	favorites, err := LoadFavorites()
+	if err != nil {
+		return true
+	}
+
+	for _, srv := range favorites.Servers {
+		// Skip the current server (same host:port)
+		if srv.Host == host && srv.Port == port {
+			continue
+		}
+		// Check if another server has this alias
+		if srv.Alias == alias {
+			return false
+		}
+	}
+	return true
 }

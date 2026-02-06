@@ -4,7 +4,7 @@ set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT="${REPO_ROOT}/omp-tui"
-VERSION="1.1.0"
+VERSION="1.2.0"
 
 echo "Building omp-launcher-tui v${VERSION}..."
 

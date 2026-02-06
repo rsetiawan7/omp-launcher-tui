@@ -855,6 +855,7 @@ func (a *App) loadFavorites() {
 	for i, fav := range favorites.Servers {
 		a.favorites[i] = server.Server{
 			Name:    fav.Name,
+			Alias:   fav.Alias,
 			Host:    fav.Host,
 			Port:    fav.Port,
 			Loading: true,
@@ -867,9 +868,14 @@ func (a *App) applyFavoritesFilterAndSort() {
 	filtered := make([]server.Server, 0, len(a.favorites))
 	query := strings.TrimSpace(strings.ToLower(a.searchQuery))
 	for _, srv := range a.favorites {
-		// Apply text search filter
-		if query != "" && !strings.Contains(strings.ToLower(srv.Name), query) && !strings.Contains(strings.ToLower(srv.Addr()), query) {
-			continue
+		// Apply text search filter (check name, alias, and address)
+		if query != "" {
+			nameMatch := strings.Contains(strings.ToLower(srv.Name), query)
+			aliasMatch := srv.Alias != "" && strings.Contains(strings.ToLower(srv.Alias), query)
+			addrMatch := strings.Contains(strings.ToLower(srv.Addr()), query)
+			if !nameMatch && !aliasMatch && !addrMatch {
+				continue
+			}
 		}
 		// Apply version filter
 		if !a.matchesVersionFilter(srv) {
@@ -1010,16 +1016,8 @@ func (a *App) toggleFavorite() {
 			a.layout.UpdateTable(a.filteredFavorites)
 		}
 	} else {
-		// Add to favorites
-		if err := config.AddFavorite(srv.Name, srv.Host, srv.Port); err != nil {
-			a.layout.SetStatus(fmt.Sprintf("Failed to add favorite: %v", err))
-			return
-		}
-		a.layout.SetStatus(fmt.Sprintf("Added %s to favorites", srv.Name))
-
-		// Update local favorites list
-		a.favorites = append(a.favorites, srv)
-		a.applyFavoritesFilterAndSort()
+		// Show alias prompt before adding to favorites
+		a.promptAlias(srv)
 	}
 }
 

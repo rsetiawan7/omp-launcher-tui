@@ -1,5 +1,60 @@
 # Quick Start Guide
 
+## Usage Modes
+
+### TUI Mode (Interactive Browser)
+```bash
+# Run the interactive terminal UI
+./omp-tui
+```
+
+### CLI Mode (Direct Connection)
+```bash
+# Initialize configuration (first time setup)
+./omp-tui init
+
+# Initialize with paths (automated setup)
+./omp-tui init --gta-path "/path/to/GTA" --omp-launcher "/path/to/launcher"
+
+# Connect using an alias from your favorites
+./omp-tui connect <alias>
+
+# Connect using host (port defaults to 7777)
+./omp-tui connect <host>
+
+# Connect using host:port directly
+./omp-tui connect <host:port>
+
+# Export configuration to a file
+./omp-tui export backup.json
+
+# Import configuration from a file
+./omp-tui import backup.json
+
+# Examples:
+./omp-tui connect my-server           # Using alias
+./omp-tui connect 127.0.0.1            # Using host (port defaults to 7777)
+./omp-tui connect 127.0.0.1:7777       # Using host:port
+./omp-tui connect play.example.com:8888
+```
+
+**CLI Mode Features:**
+- **init**: First-time setup with optional `--gta-path` and `--omp-launcher` flags
+- **connect**: Direct connection without TUI
+  - **Alias support**: Use short names instead of typing IP:port every time
+  - **Default port**: Port 7777 is used when not specified
+  - Automatically queries server info (checks password requirement)
+  - Prompts for password if needed
+  - Uses configuration from config file
+  - Helpful error messages if config is missing
+- **export**: Backup configuration, favorites, and master lists
+- **import**: Restore from backup with confirmation
+
+**Alias Workflow:**
+1. Run TUI and add servers to favorites with custom aliases
+2. Use `./omp-tui connect my-alias` for quick connection
+3. Much faster than typing full IP addresses!
+
 ## Building & Running
 
 ### Simplest Way (using Makefile)

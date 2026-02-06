@@ -8,6 +8,7 @@ import (
 
 type Server struct {
 	Name        string            `json:"name"`
+	Alias       string            `json:"alias,omitempty"`
 	Host        string            `json:"host"`
 	Port        int               `json:"port"`
 	Players     int               `json:"players"`
