@@ -41,22 +41,43 @@ func main() {
 			os.Exit(0)
 
 		case "connect":
+			// Define connect-specific flags
+			connectCmd := flag.NewFlagSet("connect", flag.ExitOnError)
+			nickname := connectCmd.String("nickname", "", "Player nickname (overrides config)")
+
+			// Check minimum arguments before parsing flags
 			if len(os.Args) < 3 {
-				fmt.Fprintf(os.Stderr, "Usage: %s connect <alias|host[:port]>\n", os.Args[0])
-				fmt.Fprintf(os.Stderr, "Examples:\n")
-				fmt.Fprintf(os.Stderr, "  %s connect my-server        # Connect using alias\n", os.Args[0])
-				fmt.Fprintf(os.Stderr, "  %s connect 127.0.0.1        # Connect using IP (port defaults to 7777)\n", os.Args[0])
-				fmt.Fprintf(os.Stderr, "  %s connect 127.0.0.1:7777   # Connect using IP with custom port\n", os.Args[0])
+				fmt.Fprintf(os.Stderr, "Usage: %s connect [flags] <alias|host[:port]>\n", os.Args[0])
+				fmt.Fprintf(os.Stderr, "\nFlags:\n")
+				connectCmd.PrintDefaults()
+				fmt.Fprintf(os.Stderr, "\nExamples:\n")
+				fmt.Fprintf(os.Stderr, "  %s connect my-server                    # Connect using alias\n", os.Args[0])
+				fmt.Fprintf(os.Stderr, "  %s connect 127.0.0.1                    # Connect using IP (port defaults to 7777)\n", os.Args[0])
+				fmt.Fprintf(os.Stderr, "  %s connect 127.0.0.1:7777               # Connect using IP with custom port\n", os.Args[0])
+				fmt.Fprintf(os.Stderr, "  %s connect --nickname Player123 my-server  # Connect with custom nickname\n", os.Args[0])
 				os.Exit(1)
 			}
 
-			host, port, alias, err := cli.ResolveAddress(os.Args[2])
+			// Parse flags
+			if err := connectCmd.Parse(os.Args[2:]); err != nil {
+				fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+				os.Exit(1)
+			}
+
+			// Get the address argument (last non-flag argument)
+			if connectCmd.NArg() < 1 {
+				fmt.Fprintf(os.Stderr, "Error: server address required\n")
+				fmt.Fprintf(os.Stderr, "Usage: %s connect [flags] <alias|host[:port]>\n", os.Args[0])
+				os.Exit(1)
+			}
+
+			host, port, alias, err := cli.ResolveAddress(connectCmd.Arg(0))
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			if err := cli.Connect(host, port, alias); err != nil {
+			if err := cli.Connect(host, port, alias, *nickname); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}

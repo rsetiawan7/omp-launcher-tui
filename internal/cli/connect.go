@@ -15,7 +15,7 @@ import (
 )
 
 // Connect connects to a server directly via CLI
-func Connect(host string, port int, alias string) error {
+func Connect(host string, port int, alias string, nicknameOverride string) error {
 	// Load config to get game path and launcher path
 	cfg, err := config.Load()
 	if err != nil {
@@ -25,6 +25,12 @@ func Connect(host string, port int, alias string) error {
 	// Check if game path and launcher path are configured
 	if cfg.GTAPath == "" || cfg.OMPLauncher == "" {
 		return fmt.Errorf("game path and OMP launcher are not configured\n\nRun '%s init --gta-path <path> --omp-launcher <path>' to set up configuration\nOr run '%s' (TUI mode) and configure them using the 'C' key", os.Args[0], os.Args[0])
+	}
+
+	// Use override nickname if provided, otherwise use config nickname
+	nickname := cfg.Nickname
+	if nicknameOverride != "" {
+		nickname = nicknameOverride
 	}
 
 	// Query server information
@@ -71,7 +77,7 @@ func Connect(host string, port int, alias string) error {
 	opts := launcher.LaunchOptions{
 		Host:     host,
 		Port:     port,
-		Nickname: cfg.Nickname,
+		Nickname: nickname,
 		GTAPath:  cfg.GTAPath,
 		Password: password,
 	}
