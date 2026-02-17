@@ -37,7 +37,7 @@ The launcher fetches servers from the **Open.MP API** (`https://api.open.mp/serv
   - Preserved ping data when merging server lists
 - **Password Support**: Securely enter passwords for locked servers (never persisted)
 - **Browse-Only Mode**: Optional mode to view servers without connecting (great for streaming/demos)
-- **Cross-Platform Launcher**: Automatic Wine/Proton detection on Linux/macOS; native Windows support
+- **Cross-Platform Launcher**: Automatic Wine/Proton/CrossOver detection on Linux/macOS; native Windows support
 - **Persistent Config**: Saves nickname, GTA path, open.mp launcher path to config file
 - **Master List Manager**: Add, edit, and manage multiple master server lists
 - **File Browser**: Built-in file browser for selecting GTA path and launcher location
@@ -52,7 +52,7 @@ The launcher fetches servers from the **Open.MP API** (`https://api.open.mp/serv
 - **Linux**: `build-essential` and `pkg-config`
 - **Windows**: Download pre-built binary or install Go 1.22+
 - **Open.MP Client**: GTA: San Andreas with Open.MP installed
-- **Wine/Proton** (Linux/macOS): Auto-detected, optional if using native binary
+- **Wine/Proton/CrossOver** (Linux/macOS): Auto-detected, optional if using native binary
 
 ### Build
 
@@ -205,16 +205,18 @@ Configuration files are stored in the application support directory:
 - **nickname**: Your in-game name
 - **gta_path**: Path to your GTA: San Andreas installation
 - **omp_launcher**: Path to open.mp launcher executable
-- **runtime**: `auto` (detect), `wine`, `proton`, or `native` (Windows)
+- **runtime**: `auto` (detect), `wine`, `proton`, `crossover` (macOS), or `native` (Windows)
 - **master_server**: Open.MP API endpoint (default: `https://api.open.mp/servers`)
 - **browse_only**: When `true`, disables server connections (browse/view only mode)
+- **crossover_launcher**: (CrossOver only) Path to omp-launcher-tui.exe in CrossOver bottle (e.g., `Z:/path/to/omp-launcher-tui.exe`)
+- **crossover_bottle**: (Optional) CrossOver bottle name to use (macOS only)
 
 ## Keybindings
 
 ### Main View
 
 | Key | Action |
-|-----|-Search by server name or IP |
+| --- | ------ |
 | `V` | Filter by version (0.3.7, 0.3.DL, open.mp) |
 | `R` | Refresh server list (fetches fresh data)
 | `Enter` | Connect to selected server |
@@ -239,7 +241,7 @@ Configuration files are stored in the application support directory:
 | `Esc` | Close modal and return to main view |
 | `↑` `↓` | Navigate between fields |
 
-## Wine / Proton Setup
+## Wine / Proton / CrossOver Setup
 
 ### Linux with Wine
 
@@ -262,6 +264,35 @@ Install via Homebrew:
 brew install wine-stable
 ```
 
+### macOS with CrossOver
+
+CrossOver will be auto-detected if installed. Setup workflow:
+
+1. **Install Windows build in CrossOver bottle**: 
+   - Download the Windows build of omp-launcher-tui.exe
+   - Place it in your CrossOver bottle (e.g., in `C:\Program Files\omp-launcher-tui\`)
+   
+2. **Configure in macOS TUI**:
+   - Run the macOS native build of omp-launcher-tui
+   - Press `C` to open configuration
+   - Set Runtime to `crossover`
+   - Set CrossOver Launcher to the Windows path (e.g., `C:\Program Files\omp-launcher-tui\omp-launcher-tui.exe` or `Z:\path\to\omp-launcher-tui.exe`)
+   - Set CrossOver Bottle name (optional, defaults to default bottle)
+
+3. **How it works**:
+   - The macOS TUI shows the server list
+   - When you connect, it calls: `wine omp-launcher-tui.exe connect -nickname <nickname> <host>:<port>`
+   - The Windows executable runs in CrossOver and launches GTA SA
+
+**Example config.json**:
+```json
+{
+  "runtime": "crossover",
+  "crossover_launcher": "C:\\Program Files\\omp-launcher-tui\\omp-launcher-tui.exe",
+  "crossover_bottle": "YourBottleName"
+}
+```
+
 ## Fallback Server List
 
 If the Open.MP API is unreachable, the launcher uses cached servers or `servers.json` in the current directory. Update [servers.json](servers.json) with your custom list:
@@ -279,13 +310,13 @@ If the Open.MP API is unreachable, the launcher uses cached servers or `servers.
 ## Troubleshooting
 
 ### "No supported runtime found"
-Install Wine or Proton, or use the native binary on Windows.
+Install Wine, Proton, CrossOver, or use the native binary on Windows.
 
 ### "Unable to find Open.MP client executable"
 Set `gta_path` in config to your GTA: San Andreas folder. Use `Ctrl+T` in the config modal to test if `gta_sa.exe` exists.
 
 ### "Player list unavailable (SA-MP limitation)"
-Some servers don't expose the player list via the query protocol. This is a SA-MP protocol limitation, not a bug.
+Some servers don't expose the player list via the query protocol because number of players above than 100 players. This is a SA-MP protocol limitation, not a bug.
 
 ### Network errors when fetching servers
 Check your internet connectivity. The launcher will use cached servers if the master server is unavailable.

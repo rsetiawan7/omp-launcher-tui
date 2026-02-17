@@ -442,8 +442,34 @@ func (a *App) showConfigModal() {
 		}
 		return event
 	})
-	form.AddDropDown("Runtime", []string{"auto", "wine", "proton", "native"}, runtimeIndex(a.cfg.Runtime), func(option string, _ int) {
+	form.AddDropDown("Runtime", []string{"auto", "wine", "proton", "crossover", "native"}, runtimeIndex(a.cfg.Runtime), func(option string, _ int) {
 		a.cfg.Runtime = config.Runtime(option)
+		_ = config.Save(a.cfg)
+	})
+
+	// CrossOver Launcher (Windows executable in CrossOver bottle)
+	form.AddInputField("CrossOver Launcher", a.cfg.CrossOverLauncher, 40, nil, func(text string) {
+		a.cfg.CrossOverLauncher = text
+		_ = config.Save(a.cfg)
+	})
+
+	// Add custom input capture to CrossOver Launcher field
+	crossOverLauncherItem := form.GetFormItemByLabel("CrossOver Launcher").(*tview.InputField)
+	crossOverLauncherItem.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlB {
+			a.showFileBrowser("Select CrossOver Launcher (e.g., Z:/path/to/omp-launcher-tui.exe)", func(path string) {
+				a.cfg.CrossOverLauncher = path
+				_ = config.Save(a.cfg)
+				crossOverLauncherItem.SetText(path)
+			}, a.cfg.CrossOverLauncher)
+			return nil
+		}
+		return event
+	})
+
+	// CrossOver Bottle (optional, only relevant for CrossOver runtime)
+	form.AddInputField("CrossOver Bottle", a.cfg.CrossOverBottle, 30, nil, func(text string) {
+		a.cfg.CrossOverBottle = text
 		_ = config.Save(a.cfg)
 	})
 
@@ -496,8 +522,10 @@ func runtimeIndex(rt config.Runtime) int {
 		return 1
 	case config.RuntimeProton:
 		return 2
-	case config.RuntimeNative:
+	case config.RuntimeCrossOver:
 		return 3
+	case config.RuntimeNative:
+		return 4
 	default:
 		return 0
 	}

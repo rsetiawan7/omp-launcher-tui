@@ -10,7 +10,7 @@ import (
 	"github.com/rsetiawan7/omp-launcher-tui/internal/tui"
 )
 
-var Version = "1.2.0"
+var Version = "1.3.0"
 
 func main() {
 	// Check if CLI mode is requested

@@ -26,6 +26,14 @@ func Launch(cfg config.Config, opts LaunchOptions) error {
 		return err
 	}
 
+	// For CrossOver, use CrossOverLauncher if specified, otherwise fall back to OMPLauncher
+	if runtimeChoice == config.RuntimeCrossOver {
+		if cfg.CrossOverLauncher == "" {
+			return errors.New("CrossOverLauncher path not configured")
+		}
+		return launchViaCrossOver(cfg, opts)
+	}
+
 	if cfg.OMPLauncher == "" {
 		return errors.New("OMPLauncher path not configured")
 	}
@@ -122,4 +130,47 @@ func printCommand(cmd *exec.Cmd, password string) {
 }
 func itoa(v int) string {
 	return strconv.Itoa(v)
+}
+
+func launchViaCrossOver(cfg config.Config, opts LaunchOptions) error {
+	winePath := "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
+
+	// Check if wine exists
+	if _, err := os.Stat(winePath); err != nil {
+		return fmt.Errorf("CrossOver wine not found at %s: %w", winePath, err)
+	}
+
+	// Note: CrossOverLauncher is a Windows path (e.g., Z:/path/to/file.exe)
+	// We can't validate it from macOS, wine will handle the path resolution
+	if cfg.CrossOverLauncher == "" {
+		return errors.New("CrossOverLauncher path is empty")
+	}
+
+	// Build command: wine omp-launcher-tui.exe connect -h <host> -p <port> -n <nickname>
+	cmdArgs := []string{cfg.CrossOverLauncher, "connect", "-nickname", opts.Nickname, fmt.Sprintf("%s:%d", opts.Host, opts.Port)}
+
+	cmd := exec.Command(winePath, cmdArgs...)
+
+	// Set CrossOver bottle if specified
+	if cfg.CrossOverBottle != "" {
+		cmd.Env = append(os.Environ(), "CX_BOTTLE="+cfg.CrossOverBottle)
+	}
+
+	// Print the command that will be executed
+	fmt.Printf("Executing via CrossOver: %s %s connect -nickname %s %s:%d",
+		winePath, cfg.CrossOverLauncher, opts.Nickname, opts.Host, opts.Port)
+	if cfg.CrossOverBottle != "" {
+		fmt.Printf(" (bottle: %s)", cfg.CrossOverBottle)
+	}
+	fmt.Println()
+	fmt.Println("Note: Password prompt (if needed) will appear from the Windows executable")
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
 }

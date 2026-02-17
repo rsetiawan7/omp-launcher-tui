@@ -50,7 +50,7 @@ bin/
 **All static, zero external dependencies**
 
 ### ⚙️ Configuration
-- **config.json** - Example configuration
+- **config.json** - Example configuration with CrossOver fields
 - **servers.json** - Fallback server list
 - **go.mod/go.sum** - Dependency manifest
 
@@ -94,7 +94,10 @@ omp-tui
 - ✅ **Manual refresh** - R key always fetches fresh data
 - ✅ Password-protected server support
 - ✅ **Browse-only mode** - View servers without connecting (great for demos/streaming)
-- ✅ Wine/Proton launcher with auto-detection
+- ✅ **Wine/Proton/CrossOver launcher** with auto-detection
+  - Wine and Proton support on Linux/macOS
+  - CrossOver support on macOS
+  - Native Windows support
 - ✅ Persistent JSON config
 - ✅ **Config modal** - Press C to open configuration
 - ✅ **File browser** - Built-in directory browser

@@ -27,6 +27,10 @@ Welcome to the Open.MP TUI Launcher project! This is your guide to all available
 - **[PROJECT_COMPLETION.md](PROJECT_COMPLETION.md)** - Detailed completion report
 - **[STATUS.md](STATUS.md)** - Visual project summary
 
+### Release Notes
+- **[RELEASE_NOTES_v1.3.0.md](RELEASE_NOTES_v1.3.0.md)** - CrossOver support for macOS
+- **[RELEASE_NOTES_v1.2.0.md](RELEASE_NOTES_v1.2.0.md)** - Export/Import and enhanced init
+
 ## 🗂️ Project Structure
 
 ```
@@ -86,6 +90,9 @@ Welcome to the Open.MP TUI Launcher project! This is your guide to all available
 
 ## 🌟 Recent Updates
 
+- **CrossOver Support (v1.3.0)** - macOS users can now use CrossOver runtime
+- **Export/Import Commands (v1.2.0)** - Backup and restore configurations
+- **Enhanced Init Command (v1.2.0)** - Automated setup with --gta-path and --omp-launcher flags
 - **Version Filtering** - Filter servers by 0.3.7, 0.3.DL, or open.mp (Press V)
 - **Smart Caching** - 24-hour cache with preserved ping/player data
 - **Debounced Updates** - 500ms delay prevents excessive server queries

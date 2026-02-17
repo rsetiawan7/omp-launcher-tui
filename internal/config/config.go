@@ -10,19 +10,22 @@ import (
 type Runtime string
 
 const (
-	RuntimeAuto   Runtime = "auto"
-	RuntimeWine   Runtime = "wine"
-	RuntimeProton Runtime = "proton"
-	RuntimeNative Runtime = "native"
+	RuntimeAuto      Runtime = "auto"
+	RuntimeWine      Runtime = "wine"
+	RuntimeProton    Runtime = "proton"
+	RuntimeCrossOver Runtime = "crossover"
+	RuntimeNative    Runtime = "native"
 )
 
 type Config struct {
-	Nickname     string  `json:"nickname"`
-	GTAPath      string  `json:"gta_path"`
-	OMPLauncher  string  `json:"omp_launcher"`
-	Runtime      Runtime `json:"runtime"`
-	MasterServer string  `json:"master_server"`
-	BrowseOnly   bool    `json:"browse_only"`
+	Nickname          string  `json:"nickname"`
+	GTAPath           string  `json:"gta_path"`
+	OMPLauncher       string  `json:"omp_launcher"`
+	Runtime           Runtime `json:"runtime"`
+	MasterServer      string  `json:"master_server"`
+	BrowseOnly        bool    `json:"browse_only"`
+	CrossOverBottle   string  `json:"crossover_bottle,omitempty"`
+	CrossOverLauncher string  `json:"crossover_launcher,omitempty"`
 }
 
 // generateRandomNickname generates a random nickname following SA-MP rules:
@@ -96,7 +99,7 @@ func getDefaultWindowsPaths() (gtaPath, ompLauncher string) {
 
 func DefaultConfig() Config {
 	gtaPath, ompLauncher := getDefaultWindowsPaths()
-	
+
 	return Config{
 		Nickname:     generateRandomNickname(),
 		GTAPath:      gtaPath,

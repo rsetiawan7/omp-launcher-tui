@@ -249,6 +249,9 @@ GOFLAGS="-v -x" make build
   - macOS: `brew install make`
   - Linux: `sudo apt-get install make`
   - Windows: Use WSL or `choco install make`
+- **Wine/Proton/CrossOver** (Linux/macOS) - Optional, auto-detected
+  - macOS: `brew install wine-stable` or use CrossOver
+  - Linux: Wine or Proton from Steam
 
 ## Troubleshooting
 

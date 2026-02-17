@@ -16,7 +16,10 @@ A production-ready, cross-platform terminal UI launcher for Open.MP written in p
 - ✓ **Search & sort** - by name/IP, ping, player count
 - ✓ **Password handling** - secure, in-memory only (never persisted)
 - ✓ **Config persistence** - `~/.config/omp-tui/config.json`
-- ✓ **Wine/Proton launcher** - auto-detected, cross-platform execution
+- ✓ **Wine/Proton/CrossOver launcher** - auto-detected, cross-platform execution
+  - Wine and Proton support on Linux/macOS
+  - CrossOver support on macOS
+  - Native Windows support
 - ✓ **GitHub auto-updater** - version checking and safe downloads
 - ✓ **Static binary** - CGO disabled, zero external dependencies
 
